@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Laravel\Sanctum\HasApiTokens;
+
+class Tenant extends Model
+{
+    use HasApiTokens,HasFactory;
+
+    protected $fillable = [
+        'name',
+        'email',
+        'phone_number',
+        'address',
+        'password',
+        'property_id', 
+        'house_no'
+    ];
+
+    // Each tenant belongs to one property
+    public function property()
+    {
+        return $this->belongsTo(Properties::class, 'property_id');
+    }
+
+    public function moveOutRequests()
+    {
+        return $this->hasMany(MoveOutRequest::class);  
+    }
+     // Relationship: A user can leave many ratings for service providers
+     public function providerRatings()
+     {
+         return $this->hasMany(ProviderRating::class, 'user_id');
+     }
+
+     public function notifications()
+     {
+         return $this->morphMany(Notifications::class, 'user');
+     }
+}
