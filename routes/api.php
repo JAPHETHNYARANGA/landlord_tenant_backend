@@ -7,11 +7,12 @@ use App\Http\Controllers\LandlordController;
 use App\Http\Controllers\MaintenanceTicketController;
 use App\Http\Controllers\MoveOutRequestController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PropertiesController;
 use App\Http\Controllers\ProviderRatingController;
 use App\Http\Controllers\ServiceProviderController;
 use App\Http\Controllers\TenantController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -53,7 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
    Route::get('maintenance-tickets/{ticket_id}/reviews', [ProviderRatingController::class, 'fetchReviews']);
 
-   Route::apiResource('apartments', ApartmentController::class);
+  
 
    Route::get('properties/{propertyId}/room_types', [PropertiesController::class, 'fetchRoomTypes']);
 
@@ -63,7 +64,19 @@ Route::middleware('auth:sanctum')->group(function () {
    Route::get('getNotifications', [NotificationController::class,'getNotifications']);
 
 
+   Route::get('getTenantTransactions', [PaymentController::class, 'getTenantTransactions']);
+
+   Route::get('getTransactions',[PaymentController::class, 'getAllTransactions']);
 
 
+   Route::get('getLandlordTransactions', [PaymentController::class, 'getLandlordTransactions']);
+
+
+   // Route to add funds
+   Route::post('/wallet/add-funds', [WalletController::class, 'addFunds']);
+   Route::post('/wallet/remove-funds', [WalletController::class, 'removeFunds']);
+   Route::get('/wallet/get-balance', [WalletController::class, 'getBalance']);
 
 });
+
+Route::apiResource('apartments', ApartmentController::class);

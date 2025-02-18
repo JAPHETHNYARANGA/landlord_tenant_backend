@@ -14,10 +14,10 @@ class Tenant extends Model
         'name',
         'email',
         'phone_number',
-        'address',
         'password',
         'property_id', 
-        'house_no'
+        'house_no',
+        'image'
     ];
 
     // Each tenant belongs to one property

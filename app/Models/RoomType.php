@@ -13,6 +13,7 @@ class RoomType extends Model
         'property_id',
         'type', 
         'count', 
+        'price'
     ];
 
     public function property()

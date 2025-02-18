@@ -64,7 +64,7 @@ class ApartmentController extends Controller
                     // Create the full URL for the stored image
                     $imageUrl = URL::to(Storage::url($imagePath)); // Create full URL
 
-                    $imageUrl = str_replace('http://127.0.0.1:8000', 'https://9390-102-68-76-239.ngrok-free.app', $imageUrl);
+                    $imageUrl = str_replace('http://127.0.0.1:8000', 'https://app.cityrealtykenya.com/', $imageUrl);
 
                     ApartmentImage::create([
                         'apartment_id' => $apartment->id,

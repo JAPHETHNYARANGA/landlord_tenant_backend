@@ -87,14 +87,26 @@ class LandlordController extends Controller
     public function update(Request $request, Landlord $landlord)
     {
         try {
+            // Validate the incoming request
             $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => ['required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class], $landlord->id)] ,
-                'phone_number' => 'required|string|max:15',
-                'address' => 'required|string',
+                'name' => 'nullable|required|string|max:255',
+                'email' => ['nullable|required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class], $landlord->id)],
+                'phone_number' => 'nullable|required|string|max:15',
+                'address' => 'nullable|required|string',
+                // Include validation for image (optional)
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
-            $landlord->update($request->all());
+            // Check if there is an image in the request and handle the upload
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('public/landlord_images'); // Store in the 'landlord_images' directory
+
+                // Update the landlord image path
+                $landlord->image = $imagePath;
+            }
+
+            // Update other landlord details
+            $landlord->update($request->except('image')); // Exclude the image field from being updated here
 
             return response()->json([
                 'message' => 'Landlord updated successfully',
@@ -107,6 +119,7 @@ class LandlordController extends Controller
             ], 500);
         }
     }
+
 
     public function destroy($id)
     {

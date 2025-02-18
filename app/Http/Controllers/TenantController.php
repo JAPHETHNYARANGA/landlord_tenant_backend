@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class TenantController extends Controller
 {
@@ -34,16 +35,14 @@ class TenantController extends Controller
 
    
 
-   
-
     public function store(Request $request)
     {
         try {
+            // Validate the incoming request
             $request->validate([
                 'name' =>'required|string|max:255',
                 'email' => ['required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class])],
                 'phone_number' =>'required|string|max:15',
-                'address' =>'required|string',
                 'property_id' =>'required|exists:properties,id',
                 'room_type' =>'required|string',
                 'houseNo' =>'required'
@@ -53,8 +52,12 @@ class TenantController extends Controller
             $property = Properties::find($request->property_id);
             $roomType = $property->roomTypes()->where('type', $request->room_type)->first();
 
-
             if (!$roomType || $roomType->count <= 0) {
+                // Log error if room type is unavailable
+                Log::error('Room type not available', [
+                    'property_id' => $request->property_id,
+                    'room_type' => $request->room_type
+                ]);
                 return response()->json(['message' => 'No available units of this type'], 400);
             }
 
@@ -62,7 +65,6 @@ class TenantController extends Controller
             $tenant = Tenant::create([
                 'name' => $request->name,
                 'email' => $request->email,
-                'address' => $request->address,
                 'phone_number' => $request->phone_number,
                 'property_id' => $property->id,
                 'house_no' => $request->houseNo // Assuming house_no represents the room assignment
@@ -80,43 +82,65 @@ class TenantController extends Controller
                 ['token' => $token],
                 [
                     'email' => $tenant->email,
-                    'user_type' => 'tenant' 
+                    'user_type' => 'tenant'
                 ]
             );
 
-            // Create the link to set the password
-            $link = route('password.create', ['token' => $token]);
-
             // Send password creation link to the tenant's email
+            $link = route('password.create', ['token' => $token]);
             Mail::send('password_set_link', ['link' => $link], function ($m) use ($tenant) {
                 $m->from('info@landlordtenant.com', 'LandlordTenant');
                 $m->to($tenant->email, $tenant->name)->subject('Set Password');
             });
 
+            // Log success if tenant is created and email is sent
+            Log::info('Tenant created and password link sent', [
+                'tenant_id' => $tenant->id,
+                'tenant_email' => $tenant->email
+            ]);
+
             return response()->json([
-            'message' => 'Tenant created successfully. A password creation link has been sent to their email.',
+                'message' => 'Tenant created successfully. A password creation link has been sent to their email.',
                 'tenant' => $tenant
             ], 201);
         } catch (\Throwable $th) {
+            // Log error if any exception occurs
+            Log::error('Error occurred while creating tenant:', [
+                'error_message' => $th->getMessage(),
+                'error_trace' => $th->getTraceAsString()
+            ]);
+
             return response()->json([
-            'status' => false,
-            'message' => $th->getMessage()
+                'status' => false,
+                'message' => $th->getMessage()
             ], 500);
         }
     }
 
 
+
     public function update(Request $request, Tenant $tenant)
     {
         try {
+            // Validate the incoming request
             $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => ['required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class], $tenant->id)],
-                'phone_number' => 'required|string|max:15',
-                'address' => 'required|string',
+                'name' => 'nullable|required|string|max:255',
+                'email' => ['nullable|required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class], $tenant->id)],
+                'phone_number' => 'nullable|required|string|max:15',
+                // Include validation for image (optional)
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
-            $tenant->update($request->all());
+            // Check if there is an image in the request and handle the upload
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('public/tenant_images'); // Store in the 'tenant_images' directory
+
+                // Update the tenant image path
+                $tenant->image = $imagePath;
+            }
+
+            // Update other tenant details
+            $tenant->update($request->except('image')); // Exclude the image field from being updated here
 
             return response()->json([
                 'message' => 'Tenant updated successfully',
@@ -129,6 +153,7 @@ class TenantController extends Controller
             ], 500);
         }
     }
+
 
     public function destroy($id)
     {

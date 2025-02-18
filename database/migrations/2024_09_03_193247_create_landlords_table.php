@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('phone_number');
             $table->text('address');
             $table->string('password')->nullable();
+            $table->string('image')->nullable();
             $table->timestamps();
         });
     }

@@ -47,7 +47,6 @@ class PropertiesController extends Controller
                 'name' => 'required',
                 'location' => 'required',
                 'rooms' => 'required|integer',
-                'price' => 'required|numeric',
                 'type' => 'required|string',
                 'status' => 'required|string',
                 'landlord_id' => 'required|exists:landlords,id', // Validate that landlord_id exists in the landlords table
@@ -64,6 +63,7 @@ class PropertiesController extends Controller
                     'property_id' => $property->id,
                     'type' => $roomType['type'],
                     'count' => $roomType['count'],
+                    'price' => $roomType['price'],
                 ]);
             }
 

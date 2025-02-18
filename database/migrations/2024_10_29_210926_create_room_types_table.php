@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('property_id')->constrained()->onDelete('cascade'); // Foreign key referencing properties
             $table->string('type'); // e.g., 'studio', '1-bedroom', '2-bedroom'
             $table->integer('count')->default(0); // Number of available units of this type
+            $table->string('price');
             $table->timestamps();
         });
     }

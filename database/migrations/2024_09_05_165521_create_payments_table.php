@@ -15,10 +15,17 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('tenant_id');
             $table->unsignedBigInteger('property_id');
-            $table->string('amount');
-            $table->string('payment_date');
+            $table->decimal('amount', 10, 2); // Store amount as a decimal
+            $table->enum('status', ['pending', 'active', 'failed']);
+            $table->timestamp('payment_date');
             $table->string('payment_method');
+            $table->timestamp('next_payment_date')->nullable();
+            $table->string('MerchantRequestID')->nullable();
             $table->timestamps();
+
+            // Add foreign key constraints if needed
+            $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
+            $table->foreign('property_id')->references('id')->on('properties')->onDelete('cascade');
         });
     }
 

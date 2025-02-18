@@ -16,7 +16,6 @@ return new class extends Migration
             $table->string('name');
             $table->string('location');
             $table->string('rooms');
-            $table->string('price');
             $table->string('type');
             $table->string('status');
             $table->foreignId('landlord_id')->constrained('landlords')->onDelete('cascade');

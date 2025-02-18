@@ -20,6 +20,7 @@ class Landlord extends Model implements CanResetPassword
         'phone_number',
         'address',
         'password',
+        'image'
     ];
 
     public function properties()

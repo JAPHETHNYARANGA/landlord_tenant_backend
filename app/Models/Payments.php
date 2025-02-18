@@ -15,5 +15,8 @@ class Payments extends Model
         'amount',
         'payment_date',
         'payment_method',
+        'next_payment_date',
+        'MerchantRequestID',
+        'status',
     ];
 }

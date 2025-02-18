@@ -13,7 +13,6 @@ class Properties extends Model
         'name',
         'location',
         'rooms',
-        'price',
         'type',
         'status',
         'landlord_id',
