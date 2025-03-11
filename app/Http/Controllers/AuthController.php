@@ -281,7 +281,7 @@ class AuthController extends Controller
               } elseif ($user instanceof Tenant) {
                   $userType = 'tenant';
                   // Fetch the tenant with property data
-                  $user = $user->load('property');
+                  $user = $user->load(['property.roomTypes']);
               } elseif ($user instanceof SuperAdmin) {
                   $userType = 'superAdmin';
               } elseif ($user instanceof ServiceProvider) {

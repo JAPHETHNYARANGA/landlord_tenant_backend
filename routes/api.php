@@ -32,8 +32,15 @@ Route::resource('serviceProvider', ServiceProviderController::class);
 
 
 
+
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::post('landlord_image', [LandlordController::class, 'update']);
+
+
+    Route::post('tenant_image', [TenantController::class, 'update']);
 
 
    Route::get('user', [AuthController::class, 'fetchUser']);
@@ -76,6 +83,11 @@ Route::middleware('auth:sanctum')->group(function () {
    Route::post('/wallet/add-funds', [WalletController::class, 'addFunds']);
    Route::post('/wallet/remove-funds', [WalletController::class, 'removeFunds']);
    Route::get('/wallet/get-balance', [WalletController::class, 'getBalance']);
+
+
+   //Route to pay Rent
+
+   Route::post('/mpesa/payRent', [WalletController::class, 'payRent']);
 
 });
 

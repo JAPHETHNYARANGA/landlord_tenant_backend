@@ -8,9 +8,12 @@ use App\Models\ServiceProvider;
 use App\Models\Tenant;
 use App\Rules\UniqueEmail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage; 
+
 
 class LandlordController extends Controller
 {
@@ -84,34 +87,49 @@ class LandlordController extends Controller
         }
     }
 
-    public function update(Request $request, Landlord $landlord)
+    public function update(Request $request)
     {
         try {
-            // Validate the incoming request
+            // Validate the incoming request to ensure only an image is uploaded
             $request->validate([
-                'name' => 'nullable|required|string|max:255',
-                'email' => ['nullable|required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class], $landlord->id)],
-                'phone_number' => 'nullable|required|string|max:15',
-                'address' => 'nullable|required|string',
-                // Include validation for image (optional)
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'image' => 'nullable|image', // Image is optional, but if provided, it should be an image
             ]);
-
-            // Check if there is an image in the request and handle the upload
+    
+            // Fetch the authenticated user
+            $auth = Auth::user()->id;
+            $landlord = Landlord::where('id', $auth)->first();
+    
+        
+    
+            // Check if an image is being uploaded
             if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('public/landlord_images'); // Store in the 'landlord_images' directory
-
-                // Update the landlord image path
-                $landlord->image = $imagePath;
+                // Delete the old image if it exists
+                if ($landlord->image) {
+                    // Remove the 'storage/' part from the image URL before deleting
+                    $imagePath = str_replace(url('storage') . '/', '', $landlord->image);
+                    Storage::delete('public/landlord_images/' . $imagePath); // Delete the old image
+                }
+    
+                // Store the new image and get the path
+                $imagePath = $request->file('image')->store('public/landlord_images'); // Store in 'landlord_images' directory
+    
+                // Get the public URL for the stored image
+                $imageUrl = asset('storage/' . str_replace('public/', '', $imagePath)); // Remove 'public/' from the path
+    
+                // Update the landlord image path with the new URL
+                $landlord->image = $imageUrl;
             }
-
-            // Update other landlord details
-            $landlord->update($request->except('image')); // Exclude the image field from being updated here
-
-            return response()->json([
-                'message' => 'Landlord updated successfully',
-                'landlord' => $landlord
+    
+            // Explicitly update the image field
+            $landlord->update([
+                'image' => $landlord->image, // Only update the image column
             ]);
+    
+            return response()->json([
+                'message' => 'Landlord image updated successfully',
+                'landlord' => $landlord
+            ], 200);
+    
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
@@ -119,6 +137,8 @@ class LandlordController extends Controller
             ], 500);
         }
     }
+    
+
 
 
     public function destroy($id)
