@@ -62,8 +62,11 @@ class TenantController extends Controller
                 return response()->json(['message' => 'No available units of this type'], 400);
             }
 
+            $userId = Str::random(15);
+
             // Create the tenant
             $tenant = Tenant::create([
+                'user_id' =>$userId,
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone_number' => $request->phone_number,

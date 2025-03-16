@@ -13,12 +13,9 @@ return new class extends Migration
     {
         Schema::create('wallets', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');  // User ID to associate the wallet with the user
+            $table->string('user_id', 15);  // User ID to associate the wallet with the user
             $table->decimal('amount', 10, 2)->default(0.00);  // Amount in the wallet
             $table->timestamps();
-            
-            // Foreign key constraint (assumes there's a users table)
-            $table->foreign('user_id')->references('id')->on('tenants')->onDelete('cascade');
         });
     }
 

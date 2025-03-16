@@ -11,6 +11,7 @@ class Tenant extends Model
     use HasApiTokens,HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'email',
         'phone_number',
@@ -40,4 +41,5 @@ class Tenant extends Model
      {
          return $this->morphMany(Notifications::class, 'user');
      }
+
 }

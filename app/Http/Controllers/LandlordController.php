@@ -45,8 +45,11 @@ class LandlordController extends Controller
                 'address' => 'required|string',
             ]);
 
-            // Create admin without a password
-            $landlord  = Landlord::create([
+            $userId = Str::random(15);
+
+            // Create landlord
+            $landlord = Landlord::create([
+                'user_id' => $userId,
                 'name' => $request->name,
                 'email' => $request->email,
                 'address' => $request->address,

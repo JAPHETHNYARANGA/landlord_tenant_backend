@@ -42,8 +42,10 @@ class ServiceProviderController extends Controller
                 'designation' => 'required'
             ]);
 
-            // Create admin without a password
+            $userId = Str::random(15);
+            // Create provider  without a password
             $serviceProvider  = ServiceProvider::create([
+                'user_id' =>$userId,
                 'name' => $request->name,
                 'email' => $request->email,
                 'address' => $request->address,

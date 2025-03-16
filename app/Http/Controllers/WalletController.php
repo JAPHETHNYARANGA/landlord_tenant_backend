@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Tenant;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use App\Jobs\CheckTransactionStatus; // Add the use statement at the top
 
 class WalletController extends Controller
 {
     /**
      * Add funds to the wallet and initiate STK push.
      */
- 
+
 
     public function addFunds(Request $request)
     {
@@ -21,49 +23,31 @@ class WalletController extends Controller
             'amount' => 'required|numeric|min:0.01', // Amount should be greater than 0
             'phone' => 'required|string|min:10', // Ensure phone number is provided and has minimum length
         ]);
-    
+
         try {
             // Get the user ID from the authenticated user
-            $userId = Auth::user()->id;
-    
+            $user = Auth::user();
+            $userId = $user->user_id;
+            $payment_user_id = $user->id;
+
             // Find or create the wallet for the authenticated user
             $wallet = Wallet::firstOrCreate(['user_id' => $userId]);
-    
+
             // Call the STK Push API to initiate the payment
-            $response = $this->initiateStkPush($request->phone, $request->amount, $userId);
-    
+            $response = $this->initiateStkPush($request->phone, $request->amount, $payment_user_id);
+
             // Check if the STK push was initiated successfully
             if ($response['status'] == 'success') {
-                // Now, wait for the confirmation callback from M-PESA
-                // Assuming you have a method to handle the callback (it could be a webhook from M-PESA)
-                // Once the callback confirms success, update the wallet balance
-    
-                // For now, let's assume we directly check the response after STK push (simulate success here):
-                // Let's say $response contains a 'transaction_id' which will be used in callback to confirm payment
-    
-               
-
+                // Get the bill reference from the response
                 $billRef = $response['data']['account_reference'];
-                
-                sleep(120);
-                
-                $transactionStatus = $this->checkTransactionStatus($billRef); // A method to check the status
-    
-                if ($transactionStatus == 'success') {
-                    // Add balance to the wallet if the transaction was successful
-                    $wallet->addBalance($request->amount);
-    
-                    return response()->json([
-                        'status' => 'success',
-                        'message' => 'Funds added successfully!',
-                        'balance' => $wallet->amount,
-                    ]);
-                } else {
-                    return response()->json([
-                        'status' => 'failed',
-                        'message' => 'Transaction failed. Funds were not added.',
-                    ], 500);
-                }
+
+                // Dispatch the job to check transaction status in the background
+                CheckTransactionStatus::dispatch($billRef, $userId, $request->amount);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'STK Push initiated successfully. Transaction status will be updated shortly.',
+                ]);
             } else {
                 return response()->json([
                     'status' => 'failed',
@@ -77,21 +61,21 @@ class WalletController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Check the transaction status from M-PESA using the transaction ID.
      */
-    private function checkTransactionStatus($transactionId)
+    public function checkTransactionStatus($transactionId)
     {
         // This method should interact with M-PESA to get the status of the transaction
         // You can use the MpesaDataFetchController's fetchCustomerTransaction or a similar method
-        
+
         try {
             // Call your endpoint or method that fetches transaction status
             $response = Http::post('https://payment.cityrealtykenya.com/api/mpesa/confirmTransactions', [
                 'transaction_id' => $transactionId,
             ]);
-        
+
             // Check if the response is successful and contains the correct status
             if ($response->successful()) {
                 // Check if the response status is 'success' as expected
@@ -112,21 +96,21 @@ class WalletController extends Controller
             return 'failed'; // Return failed if there was an exception
         }
     }
-    
+
 
     /**
      * Call the STK Push API.
      */
-    private function initiateStkPush($phone, $amount ,$userId)
+    private function initiateStkPush($phone, $amount, $userId)
     {
         try {
             $url = 'https://payment.cityrealtykenya.com/api/mpesa/stk/initiate';
-            
+
             // Prepare the request payload
             $data = [
                 'msisdn' => $phone,
                 'amount' => $amount,
-                'userId' =>$userId
+                'userId' => $userId
                 // Add any other necessary parameters (e.g., short code, token, etc.)
             ];
 
@@ -166,7 +150,10 @@ class WalletController extends Controller
 
         try {
             // Get the user ID from the authenticated user
-            $userId = Auth::user()->id;
+
+            $user = Auth::user();
+
+            $userId = $user->user_id;
 
             // Find the wallet for the authenticated user
             $wallet = Wallet::where('user_id', $userId)->first();
@@ -200,8 +187,11 @@ class WalletController extends Controller
     public function getBalance()
     {
         try {
+
             // Get the user ID from the authenticated user
-            $userId = Auth::user()->id;
+            $user = Auth::user();
+
+            $userId = $user->user_id;
 
             // Find the wallet for the authenticated user
             $wallet = Wallet::where('user_id', $userId)->first();
@@ -226,58 +216,102 @@ class WalletController extends Controller
     }
 
 
-    public function payRent(Request $request){
-        try{
+    public function payRent(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $userId = $user->user_id;
+            $payment_user_id = $user->id;
+
             // Validate the incoming request
             $request->validate([
                 'amount' => 'required|numeric|min:0.01', // Ensure the amount is positive
-                'phone'=>'nullable',
-                'paymentChannel'=>'required'
+                'phone' => 'nullable',
+                'paymentChannel' => 'required',
             ]);
 
             $paymentChannel = $request->paymentChannel;
 
-            if($request->paymentChannel == 'mpesa'){
-                $wallet_Channel = $request->paymentChannel;
-            }else if($request->paymentChannel == 'wallet'){
-                $mpesa_Channel = $request->paymentChannel;
-            }else{
+            // Find the tenant
+            $tenant = Tenant::where('user_id', $userId)->first();
+
+            if (!$tenant) {
                 return response()->json([
-                    'message' =>'no payment method selected'
+                    'status' => 'failed',
+                    'message' => 'Tenant not found.',
+                ], 404);
+            }
+
+            // Find the landlord associated with this tenant's property
+            $landlord = $tenant->property->landlord;
+
+            if (!$landlord) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Landlord not found for this tenant.',
+                ], 404);
+            }
+
+            // Find the landlord's wallet
+            $landlordWallet = Wallet::where('user_id', $landlord->user_id)->first();
+
+            // If the landlord does not have a wallet, create one
+            if (!$landlordWallet) {
+                $landlordWallet = Wallet::create([
+                    'user_id' => $landlord->user_id,
+                    'amount' => 0, // Initialize with zero balance
                 ]);
             }
 
+            // Handle payment via wallet
+            if ($paymentChannel == 'wallet') {
+                // Find the wallet for the authenticated user (tenant)
+                $wallet = Wallet::where('user_id', $userId)->first();
 
-            if($wallet_Channel){
-                //logic to remove wallet funds
+                // Check if wallet exists
+                if (!$wallet) {
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Wallet not found for this user.',
+                    ], 404);
+                }
 
-            }else if($mpesa_Channel){
-                //logic for mpesa
+                // Check if the wallet has enough balance
+                if ($wallet->amount < $request->amount) {
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Insufficient balance in the wallet.',
+                    ], 400);
+                }
 
-                // Call the STK Push API to initiate the payment
-                $response = $this->initiateStkPush($request->phone, $request->amount, $userId);
+                // Remove the amount from the tenant's wallet
+                $wallet->removeBalance($request->amount);
 
-                // Check if the STK push was initiated successfully
-                if ($response['status'] == 'success') {               
+                // Add the amount to the landlord's wallet
+                $landlordWallet->addBalance($request->amount);
 
+                // Return success response
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Rent paid successfully!',
+                ], 200);
+            }
+
+            // If the payment method selected is MPesa
+            if ($paymentChannel == 'mpesa') {
+                // Logic for MPESA payment (This part is already implemented)
+                $response = $this->initiateStkPush($request->phone, $request->amount, $payment_user_id);
+
+                if ($response['status'] == 'success') {
                     $billRef = $response['data']['account_reference'];
-                    
-                    sleep(120);
-                    
-                    $transactionStatus = $this->checkTransactionStatus($billRef); // A method to check the status
-        
-                    if ($transactionStatus == 'success') {
-                      
-                        return response()->json([
-                            'status' => 'success',
-                            'message' => 'Rent paid successfully!',
-                        ],200);
-                    } else {
-                        return response()->json([
-                            'status' => 'failed',
-                            'message' => 'Transaction failed. Rent was not paid.',
-                        ], 500);
-                    }
+
+                    // Dispatch the job to check transaction status in the background
+                    CheckTransactionStatus::dispatch($billRef, $landlord->user_id, $request->amount);
+
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => 'Rent payment initiated successfully!',
+                    ], 200);
                 } else {
                     return response()->json([
                         'status' => 'failed',
@@ -286,10 +320,15 @@ class WalletController extends Controller
                 }
             }
 
-        }catch (\Exception $e) {
+            // If no valid payment channel is selected
             return response()->json([
                 'status' => 'failed',
-                'message' => 'Failed to fetch balance: ' . $e->getMessage(),
+                'message' => 'No payment method selected.',
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => 'Failed to process rent payment: ' . $e->getMessage(),
             ], 500);
         }
     }

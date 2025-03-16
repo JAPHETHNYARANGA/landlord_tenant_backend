@@ -185,8 +185,5 @@ class PaymentController extends Controller
                 'message' => $th->getMessage()
             ], 500);
         }
-    }
-    
-
-   
+    }   
 }

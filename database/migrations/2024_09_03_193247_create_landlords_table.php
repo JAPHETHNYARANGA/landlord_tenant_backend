@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('landlords', function (Blueprint $table) {
             $table->id();
+            $table->string('user_id')->unique();
             $table->string('name');
             $table->string('email')->unique();
             $table->string('phone_number');

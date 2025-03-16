@@ -11,6 +11,7 @@ class ServiceProvider extends Model
     use HasApiTokens,HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'email',
         'phone_number',

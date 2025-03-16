@@ -13,6 +13,7 @@ use App\Http\Controllers\ProviderRatingController;
 use App\Http\Controllers\ServiceProviderController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\withdrawFunds;
 use Illuminate\Support\Facades\Route;
 
 
@@ -32,15 +33,13 @@ Route::resource('serviceProvider', ServiceProviderController::class);
 
 
 
-
-
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
+   Route::post('/logout', [AuthController::class, 'logout']);
 
-    Route::post('landlord_image', [LandlordController::class, 'update']);
+   Route::post('landlord_image', [LandlordController::class, 'update']);
 
 
-    Route::post('tenant_image', [TenantController::class, 'update']);
+   Route::post('tenant_image', [TenantController::class, 'update']);
 
 
    Route::get('user', [AuthController::class, 'fetchUser']);
@@ -88,6 +87,10 @@ Route::middleware('auth:sanctum')->group(function () {
    //Route to pay Rent
 
    Route::post('/mpesa/payRent', [WalletController::class, 'payRent']);
+
+   //routes to withdraw funds 
+
+   Route::post('/wallet/withdraw-funds', [withdrawFunds::class, 'withdrawFunds']);
 
 });
 

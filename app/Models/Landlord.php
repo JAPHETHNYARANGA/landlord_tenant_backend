@@ -15,6 +15,7 @@ class Landlord extends Model implements CanResetPassword
     use HasApiTokens, HasFactory, Notifiable, PasswordReset;
 
     protected $fillable = [
+        'user_id',
         'name',
         'email',
         'phone_number',
@@ -32,4 +33,6 @@ class Landlord extends Model implements CanResetPassword
     {
         return $this->morphMany(Notifications::class, 'user');
     }
+
+  
 }
