@@ -11,7 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;  // Import the Log facade
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 class CheckTransactionStatus implements ShouldQueue
@@ -21,15 +21,19 @@ class CheckTransactionStatus implements ShouldQueue
     protected $billRef;
     protected $userId;
     protected $amount;
+    protected $tenantId; // Add tenantId
+    protected $landlordId; // Add landlordId
 
     /**
      * Create a new job instance.
      */
-    public function __construct($billRef, $userId, $amount)
+    public function __construct($billRef, $userId, $amount, $tenantId, $landlordId)
     {
         $this->billRef = $billRef;
         $this->userId = $userId;
         $this->amount = $amount;
+        $this->tenantId = $tenantId; // Initialize tenantId
+        $this->landlordId = $landlordId; // Initialize landlordId
     }
 
     /**
@@ -66,14 +70,15 @@ class CheckTransactionStatus implements ShouldQueue
             $wallet->addBalance($this->amount);
             Log::info("Transaction successful. Added {$this->amount} to wallet for user ID: {$this->userId}");
 
-               // Notify the user (tenant or landlord depending on the context)
-               $user = User::find($this->userId);
-               Notification::send($user, new TransactionStatusNotification('success', $this->amount));
+            // Record the rent payment
+            $controller->recordRentPayment($this->tenantId, $this->landlordId, $this->amount, 'mpesa', $this->billRef);
+
+            // Notify the user (tenant or landlord depending on the context)
+            $user = User::find($this->userId);
+            Notification::send($user, new TransactionStatusNotification('success', $this->amount));
         } else {
             // Handle any other state, but don't throw an exception for other states
             Log::warning("Unexpected response for BillRef {$this->billRef}: {$response}");
         }
     }
-
-    
 }

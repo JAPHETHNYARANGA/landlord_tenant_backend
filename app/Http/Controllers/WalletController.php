@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use App\Jobs\CheckTransactionStatus; // Add the use statement at the top
+use App\Models\RentPayments;
 
 class WalletController extends Controller
 {
@@ -290,6 +291,9 @@ class WalletController extends Controller
                 // Add the amount to the landlord's wallet
                 $landlordWallet->addBalance($request->amount);
 
+                // Record the rent payment
+                $this->recordRentPayment($tenant->id, $landlord->id, $request->amount, 'wallet');
+
                 // Return success response
                 return response()->json([
                     'status' => 'success',
@@ -306,7 +310,7 @@ class WalletController extends Controller
                     $billRef = $response['data']['account_reference'];
 
                     // Dispatch the job to check transaction status in the background
-                    CheckTransactionStatus::dispatch($billRef, $landlord->user_id, $request->amount);
+                    CheckTransactionStatus::dispatch($billRef, $landlord->user_id, $request->amount, $tenant->id, $landlord->id);
 
                     return response()->json([
                         'status' => 'success',
@@ -331,5 +335,48 @@ class WalletController extends Controller
                 'message' => 'Failed to process rent payment: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Record rent payment in the database.
+     */
+    public function recordRentPayment($tenantId, $landlordId, $amount, $paymentMethod, $transactionId = null)
+    {
+        $currentMonth = now()->format('Y-m');
+        $unpaidMonths = $this->getUnpaidMonths($tenantId);
+
+        foreach ($unpaidMonths as $month) {
+            RentPayments::create([
+                'tenant_id' => $tenantId,
+                'landlord_id' => $landlordId,
+                'amount' => $amount,
+                'payment_method' => $paymentMethod,
+                'transaction_id' => $transactionId,
+                'payment_date' => now(),
+                'month' => $month,
+            ]);
+        }
+    }
+
+    private function getUnpaidMonths($tenantId)
+    {
+        $unpaidMonths = [];
+        $currentMonth = now()->format('Y-m');
+        $tenant = Tenant::find($tenantId);
+        $joinDate = $tenant->created_at;
+
+        // Loop through each month since the tenant joined
+        for ($date = $joinDate; $date->format('Y-m') <= $currentMonth; $date->addMonth()) {
+            $month = $date->format('Y-m');
+            $rentPaid = RentPayments::where('tenant_id', $tenantId)
+                ->where('month', $month)
+                ->exists();
+
+            if (!$rentPaid) {
+                $unpaidMonths[] = $month;
+            }
+        }
+
+        return $unpaidMonths;
     }
 }

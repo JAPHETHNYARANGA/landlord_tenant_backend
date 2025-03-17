@@ -8,7 +8,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class Tenant extends Model
 {
-    use HasApiTokens,HasFactory;
+    use HasApiTokens, HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -16,7 +16,7 @@ class Tenant extends Model
         'email',
         'phone_number',
         'password',
-        'property_id', 
+        'property_id',
         'house_no',
         'image'
     ];
@@ -29,17 +29,22 @@ class Tenant extends Model
 
     public function moveOutRequests()
     {
-        return $this->hasMany(MoveOutRequest::class);  
+        return $this->hasMany(MoveOutRequest::class);
     }
-     // Relationship: A user can leave many ratings for service providers
-     public function providerRatings()
-     {
-         return $this->hasMany(ProviderRating::class, 'user_id');
-     }
+    // Relationship: A user can leave many ratings for service providers
+    public function providerRatings()
+    {
+        return $this->hasMany(ProviderRating::class, 'user_id');
+    }
 
-     public function notifications()
-     {
-         return $this->morphMany(Notifications::class, 'user');
-     }
+    public function notifications()
+    {
+        return $this->morphMany(Notifications::class, 'user');
+    }
 
+    // Relationship: A tenant can have many rent payments
+    public function rentPayments()
+    {
+        return $this->hasMany(RentPayments::class);
+    }
 }

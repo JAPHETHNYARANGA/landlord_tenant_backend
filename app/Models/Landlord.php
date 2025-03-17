@@ -33,6 +33,9 @@ class Landlord extends Model implements CanResetPassword
     {
         return $this->morphMany(Notifications::class, 'user');
     }
-
-  
+    // Relationship: A landlord can have many rent payments
+    public function rentPayments()
+    {
+        return $this->hasMany(RentPayments::class);
+    }
 }
