@@ -3,13 +3,16 @@
 namespace App\Jobs;
 
 use App\Http\Controllers\WalletController;
+use App\Models\User;
 use App\Models\Wallet;
+use App\Notifications\TransactionStatusNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;  // Import the Log facade
+use Illuminate\Support\Facades\Notification;
 
 class CheckTransactionStatus implements ShouldQueue
 {
@@ -62,6 +65,10 @@ class CheckTransactionStatus implements ShouldQueue
             // Add funds to the wallet if the transaction was successful
             $wallet->addBalance($this->amount);
             Log::info("Transaction successful. Added {$this->amount} to wallet for user ID: {$this->userId}");
+
+               // Notify the user (tenant or landlord depending on the context)
+               $user = User::find($this->userId);
+               Notification::send($user, new TransactionStatusNotification('success', $this->amount));
         } else {
             // Handle any other state, but don't throw an exception for other states
             Log::warning("Unexpected response for BillRef {$this->billRef}: {$response}");
