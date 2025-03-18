@@ -375,6 +375,7 @@ class WalletController extends Controller
             'transaction_id' => $transactionId,
             'payment_date' => now(),
             'month' => $month,
+            'status' => 'paid'
         ]);
 
         Log::info("Rent payment recorded successfully for month: {$month}");

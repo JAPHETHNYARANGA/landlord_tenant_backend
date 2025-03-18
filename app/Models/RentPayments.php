@@ -18,6 +18,7 @@ class RentPayments extends Model
         'transaction_id',
         'payment_date',
         'month',
+        'status'
     ];
 
     // Disable timestamps if you don't need them for this model (e.g., for custom timestamps)

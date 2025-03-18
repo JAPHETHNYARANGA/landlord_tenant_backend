@@ -25,8 +25,9 @@ class NotificationController extends Controller
             'user_id' => 'required|exists:tenants,id|exists:landlords,id|exists:admins,id', // Ensure the user exists
             'user_type' => 'required|in:tenant,landlord,admin', // Validate the user type
             'message' => 'required|string|max:255',
+            'month' => 'nullable|string|max:7',  // Optional month parameter
         ]);
-
+    
         // Dynamically fetch the user based on user_type
         $user = null;
         if ($request->user_type == 'tenant') {
@@ -36,25 +37,32 @@ class NotificationController extends Controller
         } elseif ($request->user_type == 'admin') {
             $user = Admin::find($request->user_id);
         }
-
+    
         // Ensure user exists
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
         }
-
+    
+        // Append month to the message if provided
+        $message = $request->message;
+        if ($request->has('month')) {
+            $message .= " for the month of {$request->month}";
+        }
+    
         // Create the notification for the specific user
         $notification = Notifications::create([
             'user_type' => $request->user_type,
             'user_id' => $user->id,
-            'message' => $request->message,
+            'message' => $message,
             'status' => 'unread',  // Default to 'unread'
         ]);
-
+    
         return response()->json([
             'message' => 'Notification sent successfully',
             'notification' => $notification,
         ], 201);
     }
+    
 
     /**
      * Get notifications for the authenticated user

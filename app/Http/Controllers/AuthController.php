@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendDueRentNotifications;
 use App\Models\Admin;
 use App\Models\Landlord;
 use App\Models\ServiceProvider;
@@ -25,6 +26,7 @@ class AuthController extends Controller
                 'email' => 'required|email',
                 'password' => 'required',
             ]);
+
 
             // Find the user by email
             $user = $this->findUserByEmail($request->email);

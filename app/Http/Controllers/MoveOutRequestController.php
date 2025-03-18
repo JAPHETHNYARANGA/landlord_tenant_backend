@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Admin;
 use App\Models\MoveOutRequest;
 use App\Models\Notifications;
+use App\Models\SuperAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -90,6 +91,16 @@ class MoveOutRequestController extends Controller
      
              // Send notification to all admins
              $admins = Admin::all();
+             foreach ($admins as $admin) {
+                 Notifications::create([
+                     'user_type' => 'admin',  // Add user_type here
+                     'user_id' => $admin->id,
+                     'message' => "Tenant {$tenant->name} has submitted a move-out request for property {$tenant->property->house_no}.",
+                     'status' => 'unread',
+                 ]);
+             }
+             // Send notification to all superAdmins
+             $admins = SuperAdmin::all();
              foreach ($admins as $admin) {
                  Notifications::create([
                      'user_type' => 'admin',  // Add user_type here
