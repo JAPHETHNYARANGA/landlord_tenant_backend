@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use App\Jobs\CheckTransactionStatus; // Add the use statement at the top
 use App\Models\RentPayments;
+use Illuminate\Support\Facades\Log;
 
 class WalletController extends Controller
 {
@@ -342,20 +343,41 @@ class WalletController extends Controller
      */
     public function recordRentPayment($tenantId, $landlordId, $amount, $paymentMethod, $transactionId = null)
     {
-        $currentMonth = now()->format('Y-m');
+        Log::info("Recording rent payment. Tenant ID: {$tenantId}, Landlord ID: {$landlordId}, Amount: {$amount}, Payment Method: {$paymentMethod}, Transaction ID: {$transactionId}");
+
         $unpaidMonths = $this->getUnpaidMonths($tenantId);
 
-        foreach ($unpaidMonths as $month) {
-            RentPayments::create([
-                'tenant_id' => $tenantId,
-                'landlord_id' => $landlordId,
-                'amount' => $amount,
-                'payment_method' => $paymentMethod,
-                'transaction_id' => $transactionId,
-                'payment_date' => now(),
-                'month' => $month,
-            ]);
+        // If there are no unpaid months, carry forward the payment to the next month
+        if (empty($unpaidMonths)) {
+            // Get the last recorded payment month
+            $lastPaymentMonth = RentPayments::where('tenant_id', $tenantId)
+                ->orderBy('month', 'desc')
+                ->value('month');
+
+            if ($lastPaymentMonth) {
+                // If there is a last payment month, calculate the next month
+                $nextMonth = date('Y-m', strtotime($lastPaymentMonth . ' +1 month'));
+            } else {
+                // If there are no payments at all, use the current month
+                $nextMonth = now()->format('Y-m');
+            }
+
+            $unpaidMonths[] = $nextMonth;
         }
+
+        // Record the payment for the oldest unpaid month
+        $month = reset($unpaidMonths); // Get the oldest unpaid month
+        RentPayments::create([
+            'tenant_id' => $tenantId,
+            'landlord_id' => $landlordId,
+            'amount' => $amount,
+            'payment_method' => $paymentMethod,
+            'transaction_id' => $transactionId,
+            'payment_date' => now(),
+            'month' => $month,
+        ]);
+
+        Log::info("Rent payment recorded successfully for month: {$month}");
     }
 
     private function getUnpaidMonths($tenantId)

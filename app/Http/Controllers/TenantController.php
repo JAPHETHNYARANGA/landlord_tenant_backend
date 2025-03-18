@@ -8,13 +8,14 @@ use App\Models\Properties;
 use App\Models\ServiceProvider;
 use App\Models\Tenant;
 use App\Rules\UniqueEmail;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\Storage;
 
 class TenantController extends Controller
 {
@@ -34,19 +35,19 @@ class TenantController extends Controller
         }
     }
 
-   
+
 
     public function store(Request $request)
     {
         try {
             // Validate the incoming request
             $request->validate([
-                'name' =>'required|string|max:255',
+                'name' => 'required|string|max:255',
                 'email' => ['required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class])],
-                'phone_number' =>'required|string|max:15',
-                'property_id' =>'required|exists:properties,id',
-                'room_type' =>'required|string',
-                'houseNo' =>'required'
+                'phone_number' => 'required|string|max:15',
+                'property_id' => 'required|exists:properties,id',
+                'room_type' => 'required|string',
+                'houseNo' => 'required'
             ]);
 
             // Find the property and the specific room type
@@ -66,7 +67,7 @@ class TenantController extends Controller
 
             // Create the tenant
             $tenant = Tenant::create([
-                'user_id' =>$userId,
+                'user_id' => $userId,
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone_number' => $request->phone_number,
@@ -130,13 +131,13 @@ class TenantController extends Controller
             $request->validate([
                 'image' => 'nullable|image', // Image is optional, but if provided, it should be an image
             ]);
-    
+
             // Fetch the authenticated user
             $auth = Auth::user()->id;
             $tenant = Tenant::where('id', $auth)->first();
-    
-        
-    
+
+
+
             // Check if an image is being uploaded
             if ($request->hasFile('image')) {
                 // Delete the old image if it exists
@@ -145,27 +146,26 @@ class TenantController extends Controller
                     $imagePath = str_replace(url('storage') . '/', '', $tenant->image);
                     Storage::delete('public/tenant_images/' . $imagePath); // Delete the old image
                 }
-    
+
                 // Store the new image and get the path
                 $imagePath = $request->file('image')->store('public/tenant_images'); // Store in 'landlord_images' directory
-    
+
                 // Get the public URL for the stored image
                 $imageUrl = asset('storage/' . str_replace('public/', '', $imagePath)); // Remove 'public/' from the path
-    
+
                 // Update the landlord image path with the new URL
                 $tenant->image = $imageUrl;
             }
-    
+
             // Explicitly update the image field
             $tenant->update([
                 'image' => $tenant->image, // Only update the image column
             ]);
-    
+
             return response()->json([
                 'message' => 'Landlord image updated successfully',
                 'landlord' => $tenant
             ], 200);
-    
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
@@ -193,6 +193,8 @@ class TenantController extends Controller
     }
 
 
+   
+
     public function fetchLandlordTenants()
     {
         try {
@@ -200,16 +202,30 @@ class TenantController extends Controller
 
             // Fetch the properties associated with the landlord
             $propertyIds = Properties::where('landlord_id', $landlord_id)->pluck('id');
-            
-            // Fetch tenants and eager load the associated properties
+
+            // Fetch tenants and eager load the associated properties and rent payments
             $tenants = Tenant::whereIn('property_id', $propertyIds)
-                ->with('property') // Use the correct relationship name here
-                ->get();
+                ->with('property', 'rentPayments')  // Eager load rentPayments relationship
+                ->get()
+                ->map(function ($tenant) {
+                    // Check if the tenant has paid rent up to today's date
+                    $lastPayment = $tenant->rentPayments()->where('payment_date', '<=', now())->orderBy('payment_date', 'desc')->first();
+
+                    // Determine rent status
+                    if ($lastPayment) {
+                        // Convert the payment_date string to a Carbon object and then format it
+                        $paymentDate = Carbon::parse($lastPayment->payment_date);
+                        $tenant->paymentStatus = 'Paid up to ' . $paymentDate->format('Y-m-d');
+                    } else {
+                        $tenant->paymentStatus = 'Arrears';
+                    }
+
+                    return $tenant;
+                });
 
             return response()->json([
                 'tenants' => $tenants
             ]);
-
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,

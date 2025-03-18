@@ -10,6 +10,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PropertiesController;
 use App\Http\Controllers\ProviderRatingController;
+use App\Http\Controllers\RentPaymentController;
 use App\Http\Controllers\ServiceProviderController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\WalletController;
@@ -44,7 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
    Route::get('user', [AuthController::class, 'fetchUser']);
 
-   Route::get('landlord_tenants', [TenantController::class,'fetchLandlordTenants']);
+   Route::get('landlord_tenants', [TenantController::class, 'fetchLandlordTenants']);
 
    Route::get('landlord_properties', [PropertiesController::class, 'fetchLandlordProperties']);
 
@@ -60,19 +61,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
    Route::get('maintenance-tickets/{ticket_id}/reviews', [ProviderRatingController::class, 'fetchReviews']);
 
-  
+
 
    Route::get('properties/{propertyId}/room_types', [PropertiesController::class, 'fetchRoomTypes']);
 
    Route::apiResource('move-out-requests', MoveOutRequestController::class);
 
 
-   Route::get('getNotifications', [NotificationController::class,'getNotifications']);
+   Route::get('getNotifications', [NotificationController::class, 'getNotifications']);
 
 
    Route::get('getTenantTransactions', [PaymentController::class, 'getTenantTransactions']);
 
-   Route::get('getTransactions',[PaymentController::class, 'getAllTransactions']);
+   Route::get('getTransactions', [PaymentController::class, 'getAllTransactions']);
 
 
    Route::get('getLandlordTransactions', [PaymentController::class, 'getLandlordTransactions']);
@@ -92,6 +93,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
    Route::post('/wallet/withdraw-funds', [withdrawFunds::class, 'withdrawFunds']);
 
+   //fetch Tenants paid rent data 
+   Route::get('landlord/{landlordId}/tenants-paid-rent', [RentPaymentController::class, 'fetchLandlordTenantsWhoPaidRent']);
+   // Fetch rent paid by a specific tenant
+   Route::get('tenant/{tenantId}/rent-payments', [RentPaymentController::class, 'fetchTenantRentPayments']);
+
+   // Fetch all tenants who have paid rent
+   Route::get('tenants/paid-rent', [RentPaymentController::class, 'fetchTenantsWhoPaidRent']);
+
+   Route::get('rent-paid-tenants', [RentPaymentController::class, 'fetchAllTenants']);
 });
 
 Route::apiResource('apartments', ApartmentController::class);

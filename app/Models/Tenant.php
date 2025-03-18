@@ -47,4 +47,5 @@ class Tenant extends Model
     {
         return $this->hasMany(RentPayments::class);
     }
+    
 }
