@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use App\Jobs\CheckTransactionStatus; // Add the use statement at the top
+use App\Jobs\CheckWalletRechargeStatus;
 use App\Models\RentPayments;
 use Illuminate\Support\Facades\Log;
 
@@ -44,7 +45,8 @@ class WalletController extends Controller
                 $billRef = $response['data']['account_reference'];
 
                 // Dispatch the job to check transaction status in the background
-                CheckTransactionStatus::dispatch($billRef, $userId, $request->amount);
+                // CheckTransactionStatus::dispatch($billRef, $userId, $request->amount);
+                CheckWalletRechargeStatus::dispatch($billRef, $userId, $request->amount);
 
                 return response()->json([
                     'status' => 'success',
