@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ApartmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\KplcController;
 use App\Http\Controllers\LandlordController;
 use App\Http\Controllers\MaintenanceTicketController;
 use App\Http\Controllers\MoveOutRequestController;
@@ -102,6 +103,11 @@ Route::middleware('auth:sanctum')->group(function () {
    Route::get('tenants/paid-rent', [RentPaymentController::class, 'fetchTenantsWhoPaidRent']);
 
    Route::get('rent-paid-tenants', [RentPaymentController::class, 'fetchAllTenants']);
+
+
+   //kplc and utilities
+
+   Route::post('kplc_tokens', [KplcController::class, 'buyTokens']);
 });
 
 Route::apiResource('apartments', ApartmentController::class);
