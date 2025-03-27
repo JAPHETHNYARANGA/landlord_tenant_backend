@@ -219,7 +219,6 @@ class WalletController extends Controller
         }
     }
 
-
     public function payRent(Request $request)
     {
         try {
@@ -235,6 +234,9 @@ class WalletController extends Controller
             ]);
 
             $paymentChannel = $request->paymentChannel;
+            $amount = $request->amount;
+            $serviceFee = $amount * 0.075; // 7.5% service fee
+            $landlordAmount = $amount - $serviceFee; // Amount to credit landlord
 
             // Find the tenant
             $tenant = Tenant::where('user_id', $userId)->first();
@@ -281,43 +283,62 @@ class WalletController extends Controller
                 }
 
                 // Check if the wallet has enough balance
-                if ($wallet->amount < $request->amount) {
+                if ($wallet->amount < $amount) {
                     return response()->json([
                         'status' => 'failed',
                         'message' => 'Insufficient balance in the wallet.',
                     ], 400);
                 }
 
-                // Remove the amount from the tenant's wallet
-                $wallet->removeBalance($request->amount);
+                // Remove the full amount from the tenant's wallet
+                $wallet->removeBalance($amount);
 
-                // Add the amount to the landlord's wallet
-                $landlordWallet->addBalance($request->amount);
+                // Add the amount minus service fee to the landlord's wallet
+                $landlordWallet->addBalance($landlordAmount);
 
-                // Record the rent payment
-                $this->recordRentPayment($tenant->id, $landlord->id, $request->amount, 'wallet');
+                // Record the rent payment with service fee information
+                $this->recordRentPayment($tenant->id, $landlord->id, $amount, 'wallet', null, $serviceFee, $landlordAmount);
 
                 // Return success response
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Rent paid successfully!',
+                    'details' => [
+                        'total_paid' => $amount,
+                        'service_fee' => $serviceFee,
+                        'landlord_receives' => $landlordAmount
+                    ]
                 ], 200);
             }
 
             // If the payment method selected is MPesa
             if ($paymentChannel == 'mpesa') {
-                // Logic for MPESA payment (This part is already implemented)
-                $response = $this->initiateStkPush($request->phone, $request->amount, $payment_user_id);
+                // Logic for MPESA payment
+                $response = $this->initiateStkPush($request->phone, $amount, $payment_user_id);
 
                 if ($response['status'] == 'success') {
                     $billRef = $response['data']['account_reference'];
 
                     // Dispatch the job to check transaction status in the background
-                    CheckTransactionStatus::dispatch($billRef, $landlord->user_id, $request->amount, $tenant->id, $landlord->id);
+                    // Pass the calculated amounts to the job
+                    CheckTransactionStatus::dispatch(
+                        $billRef,
+                        $landlord->user_id,
+                        $amount,
+                        $tenant->id,
+                        $landlord->id,
+                        $serviceFee,
+                        $landlordAmount
+                    );
 
                     return response()->json([
                         'status' => 'success',
                         'message' => 'Rent payment initiated successfully!',
+                        'details' => [
+                            'total_paid' => $amount,
+                            'service_fee' => $serviceFee,
+                            'landlord_receives' => $landlordAmount
+                        ]
                     ], 200);
                 } else {
                     return response()->json([
@@ -339,6 +360,7 @@ class WalletController extends Controller
             ], 500);
         }
     }
+
 
     /**
      * Record rent payment in the database.
