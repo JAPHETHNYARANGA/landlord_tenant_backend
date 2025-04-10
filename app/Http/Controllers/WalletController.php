@@ -34,7 +34,7 @@ class WalletController extends Controller
             $payment_user_id = $user->id;
 
             // Find or create the wallet for the authenticated user
-            $wallet = Wallet::firstOrCreate(['user_id' => $userId]);
+            Wallet::firstOrCreate(['user_id' => $userId]);
 
             // Call the STK Push API to initiate the payment
             $response = $this->initiateStkPush($request->phone, $request->amount, $payment_user_id);
