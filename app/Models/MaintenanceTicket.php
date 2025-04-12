@@ -37,4 +37,9 @@ class MaintenanceTicket extends Model
     {
         return $this->belongsTo(Tenant::class);
     }
+    // Add this relationship
+    public function property()
+    {
+        return $this->belongsTo(Properties::class, 'property_id');
+    }
 }
