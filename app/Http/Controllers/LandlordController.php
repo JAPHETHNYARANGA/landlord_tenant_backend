@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\Storage;
 
 
 class LandlordController extends Controller
@@ -64,7 +64,7 @@ class LandlordController extends Controller
                 ['token' => $token],
                 [
                     'email' => $landlord->email,
-                    'user_type' => 'landlord' 
+                    'user_type' => 'landlord'
                 ]
             );
 
@@ -72,16 +72,15 @@ class LandlordController extends Controller
             $link = route('password.create', ['token' => $token]);
 
             // Send password creation link to the admin's email
-            Mail::send('password_set_link', ['link' => $link], function ($m) use ($landlord ) {
+            Mail::send('password_set_link', ['link' => $link], function ($m) use ($landlord) {
                 $m->from('info@landlordtenant.com', 'LandlordTenant');
-                $m->to($landlord ->email, $landlord ->name)->subject('Set Password');
+                $m->to($landlord->email, $landlord->name)->subject('Set Password');
             });
 
             return response()->json([
                 'message' => 'Landlord created successfully. A password creation link has been sent to their email.',
-                'landlord' => $landlord 
+                'landlord' => $landlord
             ], 201);
-
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
@@ -97,13 +96,13 @@ class LandlordController extends Controller
             $request->validate([
                 'image' => 'nullable|image', // Image is optional, but if provided, it should be an image
             ]);
-    
+
             // Fetch the authenticated user
             $auth = Auth::user()->id;
             $landlord = Landlord::where('id', $auth)->first();
-    
-        
-    
+
+
+
             // Check if an image is being uploaded
             if ($request->hasFile('image')) {
                 // Delete the old image if it exists
@@ -112,27 +111,26 @@ class LandlordController extends Controller
                     $imagePath = str_replace(url('storage') . '/', '', $landlord->image);
                     Storage::delete('public/landlord_images/' . $imagePath); // Delete the old image
                 }
-    
+
                 // Store the new image and get the path
                 $imagePath = $request->file('image')->store('public/landlord_images'); // Store in 'landlord_images' directory
-    
+
                 // Get the public URL for the stored image
                 $imageUrl = asset('storage/' . str_replace('public/', '', $imagePath)); // Remove 'public/' from the path
-    
+
                 // Update the landlord image path with the new URL
                 $landlord->image = $imageUrl;
             }
-    
+
             // Explicitly update the image field
             $landlord->update([
                 'image' => $landlord->image, // Only update the image column
             ]);
-    
+
             return response()->json([
                 'message' => 'Landlord image updated successfully',
                 'landlord' => $landlord
             ], 200);
-    
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
@@ -140,7 +138,7 @@ class LandlordController extends Controller
             ], 500);
         }
     }
-    
+
 
 
 
@@ -161,4 +159,19 @@ class LandlordController extends Controller
         }
     }
 
+    public function show($id)
+    {
+        try {
+            $landlord = Landlord::findOrFail($id); // Find landlord by ID or fail
+
+            return response()->json([
+                'landlord' => $landlord
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
 }
