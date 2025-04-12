@@ -16,7 +16,7 @@ class PropertiesController extends Controller
     {
         try {
             // Retrieve all properties with their related room types
-            $properties = Properties::with('roomTypes')
+            $properties = Properties::with(['roomTypes', 'landlord:id,name'])
             ->orderBy('created_at', 'desc')
             ->get(); 
             return response()->json($properties);
@@ -84,7 +84,8 @@ class PropertiesController extends Controller
     public function show(string $id)
     {
         try{
-            $property = Properties::find($id); // Find property by id
+            $property = Properties::with(['roomTypes', 'landlord:id,name'])
+            ->find($id); 
 
         if (!$property) {
             return response()->json(['message' => 'Property not found'], 404);
@@ -171,7 +172,9 @@ class PropertiesController extends Controller
         try{
             $landlord = Auth::user()->id;
 
-            $properties = Properties::where('landlord_id', $landlord)->get(); // Retrieve all properties
+            $properties = Properties::with(['roomTypes', 'landlord:id,name'])
+            ->where('landlord_id', $landlord)
+            ->get(); 
             return response()->json($properties);
 
         }catch (\Throwable $th) {
