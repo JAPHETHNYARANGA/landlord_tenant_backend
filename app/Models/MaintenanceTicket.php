@@ -22,15 +22,19 @@ class MaintenanceTicket extends Model
         'closed_by_service_provider_id'
     ];
 
-     // Relationship: A maintenance ticket belongs to a service provider
-     public function serviceProvider()
-     {
-         return $this->belongsTo(ServiceProvider::class, 'service_provider_id');
-     }
- 
-     // Relationship: A maintenance ticket can have many ratings (if users rate the ticket)
-     public function ratings()
-     {
-         return $this->hasMany(ProviderRating::class, 'ticket_id');
-     }
+    // Relationship: A maintenance ticket belongs to a service provider
+    public function serviceProvider()
+    {
+        return $this->belongsTo(ServiceProvider::class, 'service_provider_id');
+    }
+
+    // Relationship: A maintenance ticket can have many ratings (if users rate the ticket)
+    public function ratings()
+    {
+        return $this->hasMany(ProviderRating::class, 'ticket_id');
+    }
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 }

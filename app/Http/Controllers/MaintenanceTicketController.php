@@ -17,10 +17,24 @@ class MaintenanceTicketController extends Controller
     // Display a listing of maintenance tickets
     public function index()
     {
-        $tickets = MaintenanceTicket::all()->map(function ($ticket) {
+        $tickets = MaintenanceTicket::with(['tenant', 'property'])->get()->map(function ($ticket) {
             $ticket->image_url = $ticket->image ? asset('storage/' . $ticket->image) : null;
+            
+            // Add tenant name to the ticket data
+            if ($ticket->tenant) {
+                $ticket->tenant_name = $ticket->tenant->name;
+            } else {
+                $ticket->tenant_name = 'Unknown Tenant';
+            }
+            
+            // Add property name if needed
+            if ($ticket->property) {
+                $ticket->property_name = $ticket->property->name;
+            }
+            
             return $ticket;
         });
+        
         return response()->json($tickets);
     }
 
