@@ -15,32 +15,32 @@ use Illuminate\Support\Facades\Mail;
 class MaintenanceTicketController extends Controller
 {
     // Display a listing of maintenance tickets
-        // Display a listing of maintenance tickets
-        public function index()
-        {
-            try {
-                $tickets = MaintenanceTicket::with(['tenant', 'property'])
-                    ->get()
-                    ->map(function ($ticket) {
-                        $ticket->image_url = $ticket->image ? asset('storage/' . $ticket->image) : null;
-                        
-                        // Add tenant name
-                        $ticket->tenant_name = $ticket->tenant ? $ticket->tenant->name : 'Unknown Tenant';
-                        
-                        // Add property name
-                        $ticket->property_name = $ticket->property ? $ticket->property->name : 'Unknown Property';
-                        
-                        return $ticket;
-                    });
-                    
-                return response()->json($tickets);
-            } catch (\Throwable $th) {
-                return response()->json([
-                    'status' => false,
-                    'message' => $th->getMessage()
-                ], 500);
-            }
+    // Display a listing of maintenance tickets
+    public function index()
+    {
+        try {
+            $tickets = MaintenanceTicket::with(['tenant', 'property'])
+                ->get()
+                ->map(function ($ticket) {
+                    $ticket->image_url = $ticket->image ? asset('storage/' . $ticket->image) : null;
+
+                    // Add tenant name
+                    $ticket->tenant_name = $ticket->tenant ? $ticket->tenant->name : 'Unknown Tenant';
+
+                    // Add property name
+                    $ticket->property_name = $ticket->property ? $ticket->property->name : 'Unknown Property';
+
+                    return $ticket;
+                });
+
+            return response()->json($tickets);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
         }
+    }
 
 
     // Store a newly created maintenance ticket
@@ -226,7 +226,22 @@ class MaintenanceTicketController extends Controller
             $properties = Properties::where('landlord_id', $landlord_id)->pluck('id');
 
             // Fetch tickets for the properties
-            $tickets = MaintenanceTicket::whereIn('property_id', $properties)->get();
+            // $tickets = MaintenanceTicket::whereIn('property_id', $properties)->get();
+
+            $tickets = MaintenanceTicket::with(['tenant', 'property'])
+                ->whereIn('property_id', $properties,Landlord::pluck('id')) // Assuming you want to filter by landlord IDs
+                ->get()
+                ->map(function ($ticket) {
+                    $ticket->image_url = $ticket->image ? asset('storage/' . $ticket->image) : null;
+
+                    // Add tenant name
+                    $ticket->tenant_name = $ticket->tenant ? $ticket->tenant->name : 'Unknown Tenant';
+
+                    // Add property name
+                    $ticket->property_name = $ticket->property ? $ticket->property->name : 'Unknown Property';
+
+                    return $ticket;
+                });
 
             return response()->json($tickets);
         } catch (\Throwable $th) {
