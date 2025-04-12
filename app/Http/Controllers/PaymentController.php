@@ -26,7 +26,7 @@ class PaymentController extends Controller
             $billref_no = $user;
 
             // URL of the external API (first server)
-            $apiUrl = 'http://51.83.128.210/api/mpesa/customerTransactions';
+            $apiUrl = 'https://pesa.cityrealtykenya.com/api/mpesa/customerTransactions';
 
             // Send a POST request to the first server with billref_no
             $response = Http::post($apiUrl, [
@@ -61,7 +61,7 @@ class PaymentController extends Controller
     {
         try {
             // URL of the external API to get all transactions
-            $apiUrl = 'http://51.83.128.210/api/mpesa/getAllTransactions';
+            $apiUrl = 'https://pesa.cityrealtykenya.com/api/mpesa/getAllTransactions';
 
             // Send a GET request to the external API to fetch all transactions
             $response = Http::get($apiUrl);  // GET request to fetch all transactions
@@ -121,7 +121,7 @@ class PaymentController extends Controller
             $landlordId = Auth::user()->id;
     
             // URL of the external API to get all transactions
-            $apiUrl = 'http://51.83.128.210/api/mpesa/getAllTransactions';
+            $apiUrl = 'https://pesa.cityrealtykenya.com/api/mpesa/getAllTransactions';
     
             // Send a GET request to the external API to fetch all transactions
             $response = Http::get($apiUrl);  // GET request to fetch all transactions

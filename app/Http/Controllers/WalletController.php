@@ -76,7 +76,7 @@ class WalletController extends Controller
 
         try {
             // Call your endpoint or method that fetches transaction status
-            $response = Http::post('http://51.83.128.210/api/mpesa/confirmTransactions', [
+            $response = Http::post('https://pesa.cityrealtykenya.com/api/mpesa/confirmTransactions', [
                 'transaction_id' => $transactionId,
             ]);
 
@@ -108,7 +108,7 @@ class WalletController extends Controller
     private function initiateStkPush($phone, $amount, $userId)
     {
         try {
-            $url = 'http://51.83.128.210/api/mpesa/stk/initiate';
+            $url = 'https://pesa.cityrealtykenya.com/api/mpesa/stk/initiate';
             
 
             // Prepare the request payload
