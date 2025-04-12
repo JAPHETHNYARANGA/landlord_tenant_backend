@@ -226,10 +226,8 @@ class MaintenanceTicketController extends Controller
             $properties = Properties::where('landlord_id', $landlord_id)->pluck('id');
 
             // Fetch tickets for the properties
-            // $tickets = MaintenanceTicket::whereIn('property_id', $properties)->get();
-
             $tickets = MaintenanceTicket::with(['tenant', 'property'])
-                ->whereIn('property_id', $properties,Landlord::pluck('id')) // Assuming you want to filter by landlord IDs
+                ->whereIn('property_id', $properties)
                 ->get()
                 ->map(function ($ticket) {
                     $ticket->image_url = $ticket->image ? asset('storage/' . $ticket->image) : null;
