@@ -31,9 +31,9 @@ class Properties extends Model
 
 
     // One property can have many tenants
+    // In Properties.php
     public function tenants()
     {
-        return $this->hasMany(Tenant::class);
+        return $this->hasMany(Tenant::class, 'property_id');
     }
-
 }

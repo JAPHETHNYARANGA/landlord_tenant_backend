@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Admin;
 use App\Models\Landlord;
 use App\Models\Properties;
+use App\Models\RoomType;
 use App\Models\ServiceProvider;
 use App\Models\Tenant;
 use App\Rules\UniqueEmail;
+use App\Rules\UniquePhoneNumber;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,7 +46,7 @@ class TenantController extends Controller
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => ['required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class])],
-                'phone_number' => 'required|string|max:15',
+                'phone_number' => ['required', new UniquePhoneNumber],
                 'property_id' => 'required|exists:properties,id',
                 'room_type' => 'required|string',
                 'houseNo' => 'required'
@@ -72,7 +74,8 @@ class TenantController extends Controller
                 'email' => $request->email,
                 'phone_number' => $request->phone_number,
                 'property_id' => $property->id,
-                'house_no' => $request->houseNo // Assuming house_no represents the room assignment
+                'house_no' => $request->houseNo,
+                'room_type' => $request->room_type // Add this line
             ]);
 
             // Reduce the count of the specific room type
@@ -177,14 +180,30 @@ class TenantController extends Controller
 
     public function destroy($id)
     {
+        DB::beginTransaction();
         try {
-            $tenant = Tenant::findOrFail($id); // Find the landlord by ID or fail if not found
-            $tenant->delete(); // Delete the landlord
-
+            $tenant = Tenant::findOrFail($id);
+            
+            // Get the room type associated with the tenant
+            $roomType = RoomType::where('property_id', $tenant->property_id)
+                              ->where('type', $tenant->room_type)
+                              ->first();
+            
+            if ($roomType) {
+                // Increment the available count
+                $roomType->count++;
+                $roomType->save();
+            }
+            
+            $tenant->delete();
+            
+            DB::commit();
+            
             return response()->json([
-                'message' => 'Tenant deleted successfully'
+                'message' => 'Tenant deleted successfully and room marked as available'
             ], 200);
         } catch (\Throwable $th) {
+            DB::rollBack();
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage()

@@ -11,8 +11,8 @@ class RoomType extends Model
 
     protected $fillable = [
         'property_id',
-        'type', 
-        'count', 
+        'type',
+        'count',
         'price'
     ];
 
@@ -21,4 +21,10 @@ class RoomType extends Model
         return $this->belongsTo(Properties::class, 'property_id'); // Specify the foreign key explicitly
     }
 
+    // In app/Models/RoomType.php
+    public function tenants()
+    {
+        return $this->hasMany(Tenant::class, 'property_id', 'property_id')
+                ->where('room_type', $this->type);
+    }
 }

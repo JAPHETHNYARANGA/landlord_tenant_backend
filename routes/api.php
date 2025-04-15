@@ -66,6 +66,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
    Route::get('properties/{propertyId}/room_types', [PropertiesController::class, 'fetchRoomTypes']);
 
+   Route::get('properties/{propertyId}/tenants', [PropertiesController::class, 'fetchPropertyTenants']);
+
    Route::apiResource('move-out-requests', MoveOutRequestController::class);
 
 

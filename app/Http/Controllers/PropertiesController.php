@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Properties;
 use App\Models\RoomType;
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,15 +18,15 @@ class PropertiesController extends Controller
         try {
             // Retrieve all properties with their related room types
             $properties = Properties::with(['roomTypes', 'landlord:id,name'])
-            ->orderBy('created_at', 'desc')
-            ->get(); 
+                ->orderBy('created_at', 'desc')
+                ->get();
             return response()->json($properties);
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage()
             ], 500);
-        } 
+        }
     }
 
     /**
@@ -51,7 +52,7 @@ class PropertiesController extends Controller
                 'status' => 'required|string',
                 'landlord_id' => 'required|exists:landlords,id', // Validate that landlord_id exists in the landlords table
                 'room_types' => 'required|array', // Expecting an array of room types
-                'guard_phone' =>'nullable'
+                'guard_phone' => 'nullable'
             ]);
 
             // Create property with landlord_id from the request
@@ -83,23 +84,22 @@ class PropertiesController extends Controller
      */
     public function show(string $id)
     {
-        try{
+        try {
             $property = Properties::with(['roomTypes', 'landlord:id,name'])
-            ->find($id); 
+                ->find($id);
 
-        if (!$property) {
-            return response()->json(['message' => 'Property not found'], 404);
-        }
+            if (!$property) {
+                return response()->json(['message' => 'Property not found'], 404);
+            }
 
-        return response()->json($property); // Return the property
+            return response()->json($property); // Return the property
 
-        }catch (\Throwable $th) {
+        } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage()
             ], 500);
-        } 
-        
+        }
     }
 
     /**
@@ -116,7 +116,7 @@ class PropertiesController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        try{
+        try {
             $request->validate([
                 'name' => 'sometimes|string|max:255',
                 'location' => 'sometimes|string|max:255',
@@ -124,24 +124,23 @@ class PropertiesController extends Controller
                 'price' => 'sometimes|numeric',
                 'type' => 'sometimes|string|max:50',
                 'status' => 'sometimes|string|max:50',
-                'guard_phone' =>'nullable'
+                'guard_phone' => 'nullable'
             ]);
-    
+
             $property = Properties::find($id); // Find property by id
-    
+
             if (!$property) {
                 return response()->json(['message' => 'Property not found'], 404);
             }
-    
+
             $property->update($request->all()); // Update the property
             return response()->json($property); // Return the updated property
-        }catch (\Throwable $th) {
+        } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage()
             ], 500);
-        } 
-        
+        }
     }
 
     /**
@@ -149,41 +148,41 @@ class PropertiesController extends Controller
      */
     public function destroy(string $id)
     {
-        try{
+        try {
             $property = Properties::find($id); // Find property by id
 
-        if (!$property) {
-            return response()->json(['message' => 'Property not found'], 404);
-        }
+            if (!$property) {
+                return response()->json(['message' => 'Property not found'], 404);
+            }
 
-        $property->delete(); // Delete the property
-        return response()->json(['message' => 'Property deleted successfully']); // Return success message
+            $property->delete(); // Delete the property
+            return response()->json(['message' => 'Property deleted successfully']); // Return success message
 
-        }catch (\Throwable $th) {
+        } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage()
             ], 500);
-        } 
-        
+        }
     }
 
-    public function fetchLandlordProperties(){
-        try{
+    public function fetchLandlordProperties()
+    {
+        try {
             $landlord = Auth::user()->id;
 
             $properties = Properties::with(['roomTypes', 'landlord:id,name'])
-            ->where('landlord_id', $landlord)
-            ->get(); 
+                ->where('landlord_id', $landlord)
+                ->get();
             return response()->json($properties);
-
-        }catch (\Throwable $th) {
+        } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage()
             ], 500);
-        } 
+        }
     }
+
 
     public function fetchRoomTypes($propertyId)
     {
@@ -192,8 +191,25 @@ class PropertiesController extends Controller
             if (!$property) {
                 return response()->json(['message' => 'Property not found'], 404);
             }
-
-            $roomTypes = RoomType::where('property_id', $propertyId)->get();
+    
+            $roomTypes = RoomType::where('property_id', $propertyId)
+                ->withCount(['tenants'])
+                ->get()
+                ->map(function ($roomType) {
+                    // Calculate actual available rooms
+                    $available = $roomType->count;
+                    
+                    return [
+                        'id' => $roomType->id,
+                        'type' => $roomType->type,
+                        'count' => $roomType->count,
+                        'price' => $roomType->price,
+                        'property_id' => $roomType->property_id,
+                        'occupied' => $roomType->tenants_count,
+                        'available' => $available
+                    ];
+                });
+    
             return response()->json($roomTypes);
         } catch (\Throwable $th) {
             return response()->json([
@@ -203,4 +219,24 @@ class PropertiesController extends Controller
         }
     }
 
+    public function fetchPropertyTenants($propertyId)
+    {
+        try {
+            $property = Properties::find($propertyId);
+            if (!$property) {
+                return response()->json(['message' => 'Property not found'], 404);
+            }
+
+            $tenants = Tenant::where('property_id', $propertyId)
+                ->select(['id', 'name', 'email', 'phone_number', 'house_no']) // Add other fields you need
+                ->get();
+
+            return response()->json($tenants);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
 }

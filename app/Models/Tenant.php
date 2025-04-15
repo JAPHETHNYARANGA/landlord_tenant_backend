@@ -18,7 +18,8 @@ class Tenant extends Model
         'password',
         'property_id',
         'house_no',
-        'image'
+        'image',
+        'room_type'
     ];
 
     // Each tenant belongs to one property
@@ -47,5 +48,8 @@ class Tenant extends Model
     {
         return $this->hasMany(RentPayments::class);
     }
-    
+    public function roomType()
+    {
+        return $this->belongsTo(RoomType::class);
+    }
 }

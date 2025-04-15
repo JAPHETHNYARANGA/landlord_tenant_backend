@@ -7,6 +7,7 @@ use App\Models\Landlord;
 use App\Models\ServiceProvider;
 use App\Models\Tenant;
 use App\Rules\UniqueEmail;
+use App\Rules\UniquePhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -41,7 +42,7 @@ class LandlordController extends Controller
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => ['required', 'string', 'email', 'max:255', new UniqueEmail([Tenant::class, Landlord::class, Admin::class, ServiceProvider::class])],
-                'phone_number' => 'required|string|max:15',
+                'phone_number' => ['required', new UniquePhoneNumber],
                 'address' => 'required|string',
             ]);
 

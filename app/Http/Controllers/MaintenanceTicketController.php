@@ -215,7 +215,6 @@ class MaintenanceTicketController extends Controller
     }
 
 
-
     public function fetchLandlordTickets()
     {
         try {
@@ -249,4 +248,5 @@ class MaintenanceTicketController extends Controller
             ], 500);
         }
     }
+    
 }
