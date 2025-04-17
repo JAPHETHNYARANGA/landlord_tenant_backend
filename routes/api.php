@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
    Route::apiResource('move-out-requests', MoveOutRequestController::class);
 
+   Route::get('move-out-requests-property', [MoveOutRequestController::class, 'indexByProperty']);
 
    Route::get('getNotifications', [NotificationController::class, 'getNotifications']);
 

@@ -143,22 +143,49 @@ class MoveOutRequestController extends Controller
      */
     public function update(Request $request, MoveOutRequest $moveOutRequest)
     {
-        // Validate incoming request data
-        $request->validate([
-            'move_out_date' => 'required|date',
-            'move_out_reason' => 'required|string|max:255',
-        ]);
+        try {
+            $request->validate([
+                'status' => 'required|in:approved,rejected'
+            ]);
 
-        // Update the move-out request fields
-        $moveOutRequest->update($request->only(['move_out_date', 'move_out_reason']));
+            $previousStatus = $moveOutRequest->status;
+            $newStatus = $request->status;
 
-        // Optionally, handle status change if needed (e.g., approval)
-        if ($request->has('status')) {
-            $moveOutRequest->update(['status' => $request->status]);
+            // Update status
+            $moveOutRequest->update(['status' => $newStatus]);
+
+            // Get the tenant
+            $tenant = $moveOutRequest->tenant;
+
+            // Notification messages
+            $message = $newStatus == 'approved' 
+                ? "Your move-out request has been approved." 
+                : "Your move-out request has been denied.";
+
+            // Send notification to tenant
+            Notifications::create([
+                'user_type' => 'tenant',
+                'user_id' => $tenant->id,
+                'message' => $message,
+                'status' => 'unread',
+            ]);
+
+            // If denied, delete the request (optional)
+            if ($newStatus == 'rejected') {
+                $moveOutRequest->delete();
+            }
+
+            return response()->json([
+                'message' => "Move-out request {$newStatus} successfully",
+                'data' => $moveOutRequest
+            ], 200);
+
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
         }
-
-        // Return the updated move-out request as a JSON response
-        return response()->json($moveOutRequest, 200);
     }
 
     /**
@@ -174,5 +201,18 @@ class MoveOutRequestController extends Controller
 
         // Return a success message in the response
         return response()->json(['message' => 'Move-out request deleted successfully'], 200);
+    }
+
+    public function indexByProperty(Request $request)
+    {
+        $propertyId = $request->query('property_id');
+        
+        $moveOutRequests = MoveOutRequest::with(['tenant'])
+            ->whereHas('tenant', function($query) use ($propertyId) {
+                $query->where('property_id', $propertyId);
+            })
+            ->get();
+
+        return response()->json($moveOutRequests);
     }
 }
